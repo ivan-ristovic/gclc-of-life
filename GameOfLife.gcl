@@ -1,0 +1,158 @@
+dim 40 40
+
+% Use color? (yes - 1, no - 0)
+number use_color 1
+
+% Set grid size
+number grid_size 20
+
+% Set number of generations
+point generations_num 0 0 15 15
+getx generation generations_num
+
+% State matrices
+array G { grid_size grid_size } 
+array Gnew { grid_size grid_size }
+ 
+
+% ------------------------ PATTERNS -----------------------------
+
+% 15-period oscilator
+expression G[5][9] { 1 }
+expression G[6][9] { 1 }
+expression G[7][8] { 1 }
+expression G[7][10] { 1 }
+expression G[8][9] { 1 }
+expression G[9][9] { 1 }
+expression G[10][9] { 1 }
+expression G[11][9] { 1 }
+expression G[12][8] { 1 }
+expression G[12][10] { 1 }
+expression G[13][9] { 1 }
+expression G[14][9] { 1 }
+
+% Infinite growth pattern
+%expression G[5][7] { 1 }
+%expression G[7][7] { 1 }
+%expression G[7][8] { 1 }
+%expression G[9][9] { 1 }
+%expression G[9][10] { 1 }
+%expression G[9][11] { 1 }
+%expression G[11][10] { 1 }
+%expression G[11][11] { 1 }
+%expression G[11][12] { 1 }
+%expression G[12][11] { 1 }
+
+
+% ------------------- END PATTERNS ---------------------------
+
+
+layer 0
+
+% Print initial matrix state
+number x 1
+number y 1
+while { x <= grid_size } {
+    expression y { 1 }
+    while { y <= grid_size } {
+        if_then_else { G[x][y] == 1 } {
+            number xpos 0
+            number ypos 0
+            expression xpos { x + 10 }     
+            expression ypos { y + 10 }  
+            point cell xpos ypos
+            cmark cell
+        } { }
+        expression y { y + 1 }
+    }
+    expression x { x + 1 }
+}
+
+
+number i 1
+while { i <= generation } {
+
+    layer i
+
+    % Create the next generation matrix
+    expression x { 1 }
+    expression y { 1 }
+    while { x <= grid_size } {
+        expression y { 1 }
+        while { y <= grid_size } {
+            % Count the neighbors
+            number neighbors 0
+            if_then_else { x > 1 && y > 1 } { if_then_else { G[x-1][y-1] == 1 } { 
+                expression neighbors { neighbors + 1 }  
+            } {} } {}
+            if_then_else { y > 1 } { if_then_else { G[x][y-1] == 1 } { 
+                expression neighbors { neighbors + 1 }  
+            } {} } {}
+            if_then_else { x < grid_size && y > 1 } { if_then_else { G[x+1][y-1] == 1 } { 
+                expression neighbors { neighbors + 1 }  
+            } {} } {}
+            if_then_else { x > 1 } { if_then_else { G[x-1][y] == 1 } { 
+                expression neighbors { neighbors + 1 }  
+            } {} } {}
+            if_then_else {x < grid_size } { if_then_else { G[x+1][y] == 1 } { 
+                expression neighbors { neighbors + 1 }  
+            } {} } {}
+            if_then_else { x > 1 && y < grid_size } { if_then_else { G[x-1][y+1] == 1 } { 
+                expression neighbors { neighbors + 1 }  
+            } {} } {}
+            if_then_else {y < grid_size } { if_then_else { G[x][y+1] == 1 } { 
+                expression neighbors { neighbors + 1 }  
+            } {} } {}
+            if_then_else { x < grid_size && y < grid_size} { if_then_else { G[x+1][y+1] == 1 } { 
+                expression neighbors { neighbors + 1 }  
+            } {} } {}
+
+            % Calculate if the cell will survive or not based on the rules
+            expression Gnew[x][y] { ite(neighbors == 3 || (neighbors == 2 && G[x][y] == 1) , 1, 0) }
+            
+            expression y { y + 1 }
+        }
+        expression x { x + 1 }
+    }
+
+    % Print current matrix state
+    number x 1
+    number y 1
+    while { x <= grid_size } {
+        expression y { 1 }
+        while { y <= grid_size } {
+            if_then_else { Gnew[x][y] == 1 } {
+                number xpos 0
+                number ypos 0
+                expression xpos { x + 10 }     
+                expression ypos { y + 10 }  
+                if_then_else { use_color == 1 && G[x][y] != 1 } { color 0 255 0 } { color 0 0 0 }
+                point cell xpos ypos
+                cmark cell
+            } { }
+            expression y { y + 1 }
+        }
+        expression x { x + 1 }
+    }
+
+    % Copy back to old matrix
+    expression x { 1 }
+    expression y { 1 }
+    while { x <= grid_size } {
+        expression y { 1 }
+        while { y <= grid_size } {
+            expression G[x][y] { Gnew[x][y] } 
+            expression y { y + 1 }
+        }
+        expression x { x + 1 }
+    }
+
+    expression i { i + 1 }
+}
+
+
+number last_layer 0
+expression last_layer { i - 2 }
+hide_layers_to last_layer
+
+animation_frames 15 2
